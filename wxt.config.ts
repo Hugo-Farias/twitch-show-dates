@@ -5,7 +5,6 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   runner: { disabled: true },
   manifest: {
-    // default_locale: "en",
     permissions: ["storage"],
   },
 });
