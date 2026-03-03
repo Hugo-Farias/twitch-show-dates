@@ -14,32 +14,39 @@ export const wlog = (...content: Parameters<typeof warn>) => {
   warn(logPrefix, ...content);
 };
 
-export function onChildAdded(
-  target: HTMLElement,
-  callback: (added: Element[], mutation: MutationRecord) => void,
-  options: MutationObserverInit = { childList: true },
+// TODO: Make search more strict by only looking for img elements
+export function onImgAdded(
+  root: ParentNode,
+  callback: (added: HTMLImageElement) => void,
+  options: MutationObserverInit = { childList: true, subtree: true },
 ): MutationObserver {
+  const selector = "img.tw-image[data-test-selector]";
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type !== "childList") continue;
-      if (mutation.addedNodes.length === 0) continue;
 
-      const addedElements = Array.from(mutation.addedNodes).filter(
-        (n): n is Element => n.nodeType === Node.ELEMENT_NODE,
-      );
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
 
-      if (addedElements.length > 0) {
-        callback(addedElements, mutation);
+        const el = node as Element;
+
+        // If the added node itself matches
+        if (el.matches(selector)) {
+          callback(el as HTMLImageElement);
+        }
+
+        // If matching elements exist inside the subtree
+        const nested = el.querySelectorAll(selector);
+        for (const img of nested) {
+          callback(img as HTMLImageElement);
+        }
       }
     }
   });
 
-  observer.observe(target, {
-    childList: true,
-    ...options,
-  });
-
-  return observer; // so you can disconnect() later
+  observer.observe(root, options);
+  return observer;
 }
 
 export function getDeepestLastElement(root: Element): Element {

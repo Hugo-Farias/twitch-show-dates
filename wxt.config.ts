@@ -6,5 +6,6 @@ export default defineConfig({
   runner: { disabled: true },
   manifest: {
     permissions: ["storage"],
+    description: "Show the date instead of relative time for Twitch VODs",
   },
 });
