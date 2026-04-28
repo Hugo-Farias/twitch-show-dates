@@ -14,18 +14,29 @@ const devFunc = () => {
     if (!videoContainer) return;
 
     video.pause();
-    video.muted = false;
-    videoContainer.remove();
-    video.remove();
+    video.muted = true;
+    // videoContainer.remove();
+    // video.remove();
   }, 3000);
 };
 
-const replaceDateLabel = (element: HTMLDivElement) => {
+const replaceDateLabel = (element: HTMLElement) => {
   getDeepestLastElement(element).textContent = "test";
   const imgElement = element.querySelector<HTMLImageElement>("img[title]");
   if (!imgElement) return;
-  const relativeDateElement = imgElement.title;
-  console.log("relativeDateElement ==>", relativeDateElement);
+
+  if (element.tagName !== "ARTICLE" && element.tagName === "DIV") {
+    const articleElement = element.querySelector<HTMLElement>("article");
+    if (!articleElement) return;
+
+    element = articleElement;
+  }
+
+  const dateElement = getDeepestLastElement(element);
+
+  if (!imgElement) return;
+
+  dateElement.textContent = imgElement.title;
 };
 
 export default defineContentScript({
@@ -35,10 +46,15 @@ export default defineContentScript({
     clog("init 🟢");
 
     until(() => {
+      console.log("navigate event fired");
+
       if (document.readyState !== "complete") return false;
 
-      const sectionElement = document.querySelector<HTMLElement>(
-        "div[data-test-selector='content'] > div",
+      // const sectionElement = document.querySelector<HTMLElement>(
+      //   "section[aria-label='Main Content']",
+      // );
+      const sectionElement = document.querySelector<HTMLDivElement>(
+        "div.channel-info-content",
       );
 
       if (!sectionElement) return false;
@@ -46,16 +62,11 @@ export default defineContentScript({
       sectionElement.scrollIntoView();
 
       onElementAdd(sectionElement, (added) => {
-        console.log("changed");
         const addedElement = added as HTMLElement;
-        const addedImgEl =
-          addedElement.querySelector<HTMLImageElement>("img[title]");
-        if (!addedImgEl) return;
-        const dateLabelElement = addedImgEl.title;
-        console.log("dateLabelElement ==>", dateLabelElement);
 
-        // const articleElements = sectionElement.querySelectorAll("article");
-        // console.log("articleElements ==>", articleElements);
+        if (!addedElement.tagName) return;
+
+        replaceDateLabel(addedElement);
       });
 
       return true;

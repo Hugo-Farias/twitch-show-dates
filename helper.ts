@@ -15,17 +15,24 @@ export const wlog = (...content: Parameters<typeof warn>) => {
 };
 
 // TODO: Find a better way to select the container
-export function onElementAdd(element: Node, callback: (node: Node) => void) {
-  new MutationObserver((mutations) => {
+export function onElementAdd(
+  element: Node,
+  callback: (node: Node) => void,
+): MutationObserver {
+  const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         callback(node);
       }
     }
-  }).observe(element, {
+  });
+
+  observer.observe(element, {
     childList: true,
     subtree: true,
   });
+
+  return observer;
 }
 
 export function getDeepestLastElement(root: Element): Element {
@@ -45,7 +52,7 @@ export const until = (fn: () => boolean | undefined, delay = 300) => {
   const id = setInterval(() => {
     count++;
 
-    if (count >= 500) {
+    if (count >= 150) {
       clearInterval(id);
       elog(
         "until: function did not return true within the specified amount of attempts",
