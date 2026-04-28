@@ -1,10 +1,9 @@
-import { clog, onImgAdded } from "@/helper";
-
-let mainInterval: ReturnType<typeof setInterval>;
+import { clog, getDeepestLastElement, onElementAdd, until } from "@/helper";
 
 // Only run in development mode
 const devFunc = () => {
   if (!import.meta.env.DEV) return;
+
   setTimeout(() => {
     const videoContainer =
       document.querySelector<HTMLDivElement>(".persistent-player");
@@ -17,62 +16,53 @@ const devFunc = () => {
     video.pause();
     video.muted = false;
     videoContainer.remove();
+    video.remove();
   }, 3000);
 };
 
-let intervalCount = 0; // contingency for infinite loop
-const totalIntervals = 50; // max intervals to try before giving up
-let observer: MutationObserver;
+const replaceDateLabel = (element: HTMLDivElement) => {
+  getDeepestLastElement(element).textContent = "test";
+  const imgElement = element.querySelector<HTMLImageElement>("img[title]");
+  if (!imgElement) return;
+  const relativeDateElement = imgElement.title;
+  console.log("relativeDateElement ==>", relativeDateElement);
+};
 
-// TODO: Handle SPA navigation by re-running the script when the URL changes
-// Possible solution: Find an event to attach this code to
 export default defineContentScript({
   matches: ["https://*.twitch.tv/*"],
   runAt: "document_idle",
   main() {
     clog("init 🟢");
 
-    if (observer) observer.disconnect();
+    until(() => {
+      if (document.readyState !== "complete") return false;
 
-    mainInterval = setInterval(() => {
-      console.log("interval");
-      intervalCount++;
-
-      if (intervalCount > totalIntervals) {
-        clearInterval(mainInterval);
-        return;
-      }
-
-      // const vodsSection = document.querySelector<HTMLDivElement>(
-      //   "div.channel-root__info > div > div > div > div > div:nth-child(2) > div:nth-child(1) > div",
-      // );
-
-      const vodsSection = document.querySelector<HTMLDivElement>(
-        'div[data-test-selector^="content"]',
+      const sectionElement = document.querySelector<HTMLElement>(
+        "div[data-test-selector='content'] > div",
       );
 
-      if (document.readyState !== "complete") return null;
-      if (!vodsSection) return null;
-      clearInterval(mainInterval);
+      if (!sectionElement) return false;
 
-      vodsSection.style.backgroundColor = "rgba(255 255 0 / 0.1)";
+      sectionElement.scrollIntoView();
 
-      vodsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      onElementAdd(sectionElement, (added) => {
+        console.log("changed");
+        const addedElement = added as HTMLElement;
+        const addedImgEl =
+          addedElement.querySelector<HTMLImageElement>("img[title]");
+        if (!addedImgEl) return;
+        const dateLabelElement = addedImgEl.title;
+        console.log("dateLabelElement ==>", dateLabelElement);
 
-      // TODO: disconnect observer when changing pages
-      observer = onImgAdded(vodsSection, (added) => {
-        if (!added.title) return null;
-        console.log(
-          "added ==>",
-          added.parentElement?.parentElement?.parentElement,
-        );
-        // added.forEach((el) => {
-        //   getDeepestLastElement(el).textContent =
-        //     el.querySelectorAll("img")[1]?.title;
-        // });
+        // const articleElements = sectionElement.querySelectorAll("article");
+        // console.log("articleElements ==>", articleElements);
       });
 
-      devFunc();
-    }, 200);
+      return true;
+    });
+
+    devFunc();
+
+    // window.navigation.dispatchEvent(new Event("navigate"));
   },
 });

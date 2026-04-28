@@ -14,39 +14,18 @@ export const wlog = (...content: Parameters<typeof warn>) => {
   warn(logPrefix, ...content);
 };
 
-// TODO: Make search more strict by only looking for img elements
-export function onImgAdded(
-  root: ParentNode,
-  callback: (added: HTMLImageElement) => void,
-  options: MutationObserverInit = { childList: true, subtree: true },
-): MutationObserver {
-  const selector = "img.tw-image[data-test-selector]";
-
-  const observer = new MutationObserver((mutations) => {
+// TODO: Find a better way to select the container
+export function onElementAdd(element: Node, callback: (node: Node) => void) {
+  new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type !== "childList") continue;
-
       for (const node of mutation.addedNodes) {
-        if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-        const el = node as Element;
-
-        // If the added node itself matches
-        if (el.matches(selector)) {
-          callback(el as HTMLImageElement);
-        }
-
-        // If matching elements exist inside the subtree
-        const nested = el.querySelectorAll(selector);
-        for (const img of nested) {
-          callback(img as HTMLImageElement);
-        }
+        callback(node);
       }
     }
+  }).observe(element, {
+    childList: true,
+    subtree: true,
   });
-
-  observer.observe(root, options);
-  return observer;
 }
 
 export function getDeepestLastElement(root: Element): Element {
@@ -58,3 +37,24 @@ export function getDeepestLastElement(root: Element): Element {
 
   return current;
 }
+
+// Wait until the function returns true, then clear the interval
+export const until = (fn: () => boolean | undefined, delay = 300) => {
+  let count = 0;
+
+  const id = setInterval(() => {
+    count++;
+
+    if (count >= 500) {
+      clearInterval(id);
+      elog(
+        "until: function did not return true within the specified amount of attempts",
+      );
+    }
+
+    if (fn()) {
+      clearInterval(id);
+      return;
+    }
+  }, delay);
+};

@@ -1,0 +1,3 @@
+home: document.querySelectorAll("div[data-a-target='home-shelf-title-vods']")
+videos: document.querySelectorAll("div[data-a-target^='video-carousel-']")
+recent broadcasts: document.querySelectorAll("div.tw-tower")

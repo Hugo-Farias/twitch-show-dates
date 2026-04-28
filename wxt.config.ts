@@ -5,7 +5,7 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   runner: { disabled: true },
   manifest: {
-    permissions: ["storage"],
+    name: "Twitch show VOD date",
     description: "Show the date instead of relative time for Twitch VODs",
   },
 });
