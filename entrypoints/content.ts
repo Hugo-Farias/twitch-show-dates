@@ -1,8 +1,16 @@
-import { clog, getDeepestLastElement, onElementAdd, until } from "@/helper";
+import {
+  clog,
+  clogdev,
+  getDeepestLastElement,
+  onElementAdd,
+  until,
+} from "@/helper";
 
 // Only run in development mode
 const devFunc = () => {
   if (!import.meta.env.DEV) return;
+
+  clog("Running in development mode, executing devFunc");
 
   setTimeout(() => {
     const videoContainer =
@@ -21,7 +29,6 @@ const devFunc = () => {
 };
 
 const replaceDateLabel = (element: HTMLElement) => {
-  getDeepestLastElement(element).textContent = "test";
   const imgElement = element.querySelector<HTMLImageElement>("img[title]");
   if (!imgElement) return;
 
@@ -30,6 +37,8 @@ const replaceDateLabel = (element: HTMLElement) => {
     if (!articleElement) return;
 
     element = articleElement;
+  } else {
+    return null;
   }
 
   const dateElement = getDeepestLastElement(element);
@@ -37,7 +46,10 @@ const replaceDateLabel = (element: HTMLElement) => {
   if (!imgElement) return;
 
   dateElement.textContent = imgElement.title;
+  dateElement.setAttribute("tw-date-label-replaced", "true");
 };
+
+let onElementAddObserver: MutationObserver;
 
 export default defineContentScript({
   matches: ["https://*.twitch.tv/*"],
@@ -45,35 +57,49 @@ export default defineContentScript({
   main() {
     clog("init 🟢");
 
-    until(() => {
-      console.log("navigate event fired");
+    window.navigation.addEventListener("navigate", () => {
+      clogdev("navigate event fired");
 
-      if (document.readyState !== "complete") return false;
+      if (onElementAddObserver) {
+        onElementAddObserver.disconnect();
+      }
 
-      // const sectionElement = document.querySelector<HTMLElement>(
-      //   "section[aria-label='Main Content']",
-      // );
-      const sectionElement = document.querySelector<HTMLDivElement>(
-        "div.channel-info-content",
-      );
+      until(() => {
+        // console.log("onElementAddObserver ==>", onElementAddObserver);
+        // if (onElementAddObserver) return true;
+        if (document.readyState !== "complete") return false;
 
-      if (!sectionElement) return false;
+        // const sectionElement = document.querySelector<HTMLElement>(
+        //   "section[aria-label='Main Content']",
+        // );
 
-      sectionElement.scrollIntoView();
+        const sectionElement = document.querySelector<HTMLDivElement>(
+          "div.channel-info-content",
+        );
 
-      onElementAdd(sectionElement, (added) => {
-        const addedElement = added as HTMLElement;
+        console.log("sectionElement ==>", sectionElement);
 
-        if (!addedElement.tagName) return;
+        if (!sectionElement) return false;
 
-        replaceDateLabel(addedElement);
+        sectionElement.scrollIntoView();
+
+        // TODO: Finish this
+        onElementAddObserver = onElementAdd(sectionElement, (added) => {
+          const addedElement = added as HTMLElement;
+
+          if (!addedElement.tagName) return;
+          // if (addedElement.tagName !== "A") return;
+
+          console.log("addedElement ==>", addedElement);
+
+          replaceDateLabel(addedElement);
+        });
+
+        return true;
       });
-
-      return true;
     });
-
     devFunc();
 
-    // window.navigation.dispatchEvent(new Event("navigate"));
+    window.navigation.dispatchEvent(new Event("navigate"));
   },
 });

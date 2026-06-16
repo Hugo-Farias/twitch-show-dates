@@ -6,6 +6,11 @@ export const clog = (...content: Parameters<typeof log>) => {
   log(logPrefix, ...content);
 };
 
+export const clogdev = (...content: Parameters<typeof log>) => {
+  if (!import.meta.env.DEV) return;
+  log(logPrefix, ...content);
+};
+
 export const elog = (...content: Parameters<typeof error>) => {
   error(logPrefix, ...content);
 };
