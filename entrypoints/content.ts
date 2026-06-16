@@ -28,28 +28,38 @@ const devFunc = () => {
   }, 3000);
 };
 
-const replaceDateLabel = (element: HTMLElement) => {
+// TODO: Swap the date label with the title of the image in the article element
+// FIX: Swaping the date label with the title causes the date to be swaped again 
+const replaceDateLabel = (element: Element) => {
   const imgElement = element.querySelector<HTMLImageElement>("img[title]");
-  if (!imgElement) return;
+  // if (!imgElement) return;
 
-  if (element.tagName !== "ARTICLE" && element.tagName === "DIV") {
-    const articleElement = element.querySelector<HTMLElement>("article");
-    if (!articleElement) return;
+  if (element.tagName !== "ARTICLE") {
+    if (element.tagName === "DIV") {
+      const articleElement = element.querySelector<HTMLDivElement>("article");
+      if (!articleElement) return;
 
-    element = articleElement;
-  } else {
-    return null;
+      element = articleElement;
+    } else {
+      console.log("Element is not ARTICLE or DIV, skipping:", element.tagName);
+      return null;
+    }
   }
-
   const dateElement = getDeepestLastElement(element);
 
   if (!imgElement) return;
 
+  const prevDateText = dateElement.textContent;
+  console.log("prevDateText ==>", prevDateText);
   dateElement.textContent = imgElement.title;
-  dateElement.setAttribute("tw-date-label-replaced", "true");
+  if (imgElement.parentElement) {
+    imgElement.parentElement.title = prevDateText || "";
+    imgElement.title = "";
+  }
+  element.setAttribute("tw-date-label-replaced", "true");
 };
 
-let onElementAddObserver: MutationObserver;
+let prevUrl = "";
 
 export default defineContentScript({
   matches: ["https://*.twitch.tv/*"],
@@ -60,13 +70,7 @@ export default defineContentScript({
     window.navigation.addEventListener("navigate", () => {
       clogdev("navigate event fired");
 
-      if (onElementAddObserver) {
-        onElementAddObserver.disconnect();
-      }
-
       until(() => {
-        // console.log("onElementAddObserver ==>", onElementAddObserver);
-        // if (onElementAddObserver) return true;
         if (document.readyState !== "complete") return false;
 
         // const sectionElement = document.querySelector<HTMLElement>(
@@ -81,16 +85,27 @@ export default defineContentScript({
 
         if (!sectionElement) return false;
 
+        const articleElements =
+          sectionElement.querySelectorAll<HTMLElement>("article");
+
+        console.log("articleElements.length ==>", articleElements.length);
+
+        if (articleElements.length <= 0) return false;
+
+        setTimeout(() => {
+          if (window.location.href === prevUrl) return false;
+          prevUrl = window.location.href;
+          articleElements.forEach((article) => {
+            replaceDateLabel(article);
+          });
+        }, 300);
+
         sectionElement.scrollIntoView();
 
-        // TODO: Finish this
-        onElementAddObserver = onElementAdd(sectionElement, (added) => {
+        onElementAdd(sectionElement, (added) => {
           const addedElement = added as HTMLElement;
 
           if (!addedElement.tagName) return;
-          // if (addedElement.tagName !== "A") return;
-
-          console.log("addedElement ==>", addedElement);
 
           replaceDateLabel(addedElement);
         });
@@ -98,6 +113,7 @@ export default defineContentScript({
         return true;
       });
     });
+
     devFunc();
 
     window.navigation.dispatchEvent(new Event("navigate"));

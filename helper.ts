@@ -19,25 +19,31 @@ export const wlog = (...content: Parameters<typeof warn>) => {
   warn(logPrefix, ...content);
 };
 
-// TODO: Find a better way to select the container
-export function onElementAdd(
-  element: Node,
-  callback: (node: Node) => void,
-): MutationObserver {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
+let observerConnected: MutationObserver;
+
+export function onElementAdd(element: Node, callback: (node: Node) => void) {
+  if (observerConnected) {
+    observerConnected.disconnect();
+  }
+
+  observerConnected = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (!node.getAttribute("data-a-target")) return;
+        if (node.getAttribute("tw-date-label-replaced") === "true") return;
+
         callback(node);
-      }
-    }
+      });
+    });
   });
 
-  observer.observe(element, {
+  observerConnected.observe(element, {
     childList: true,
     subtree: true,
+    attributes: true,
+    attributeFilter: ["tw-date-label-replaced"],
   });
-
-  return observer;
 }
 
 export function getDeepestLastElement(root: Element): Element {
@@ -57,7 +63,7 @@ export const until = (fn: () => boolean | undefined, delay = 300) => {
   const id = setInterval(() => {
     count++;
 
-    if (count >= 150) {
+    if (count >= 50) {
       clearInterval(id);
       elog(
         "until: function did not return true within the specified amount of attempts",
