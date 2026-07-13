@@ -1,6 +1,6 @@
-const { log, warn, error } = console;
+const { log, error } = console;
 
-const logPrefix = "tsd:";
+const logPrefix = "Twitch-Show-VOD-Date:";
 
 export const clog = (...content: Parameters<typeof log>) => {
   log(logPrefix, ...content);
@@ -15,10 +15,6 @@ export const elog = (...content: Parameters<typeof error>) => {
   error(logPrefix, ...content);
 };
 
-export const wlog = (...content: Parameters<typeof warn>) => {
-  warn(logPrefix, ...content);
-};
-
 let observerConnected: MutationObserver;
 
 export function onElementAdd(element: Node, callback: (node: Node) => void) {
@@ -31,7 +27,7 @@ export function onElementAdd(element: Node, callback: (node: Node) => void) {
       mutation.addedNodes.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
         if (!node.getAttribute("data-a-target")) return;
-        if (node.getAttribute("tw-date-label-replaced") === "true") return;
+        if (node.getAttribute("tw-date-label-replaced")) return;
 
         callback(node);
       });
